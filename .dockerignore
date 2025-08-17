@@ -1,0 +1,11 @@
+.dockerignore
+.git
+haproxy
+nginx
+*.md
+*.pdf
+*.yaml
+Dockerfile*
+LICENSE
+.cache
+.env
