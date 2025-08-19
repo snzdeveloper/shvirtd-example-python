@@ -1,4 +1,4 @@
-version: "3"
+#version: "3"
 # The parser will ignore extension fields prefixed with x-
 x-deploy: &deploy-dev
   deploy:
@@ -15,13 +15,30 @@ x-restart: &restart
   restart: always #no, on-failure , always(default), unless-stopped 
 
 include:
-  - path: ../mysql/mysql.yaml
-    project_directory: ../mysql
+  #- path: ../mysql/mysql.yaml
+  #  project_directory: ./mysql
   - path: ./proxy.yaml
     project_directory: .
      
 services:
-  webapp:
+  db:
+    image: mariadb:10.6.4-focal
+    #"mysql_native_password" only for wordpress, usually don't need!
+    #command: "--default-authentication-plugin=mysql_native_password"  # <--- При выполнени домашнего задания не использовать!!
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      backend:
+        ipv4_address: 172.20.0.10
+    <<: [*deploy-dev, *env_file, *restart]
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_HOST="%" # <--- Это вам обязательно понадобится при выполнении ДЗ!
+
+  web:
     build:
       context: .
       dockerfile: Dockerfile.python
@@ -29,17 +46,17 @@ services:
       - DB_NAME=${MYSQL_DATABASE}
       - DB_USER=${MYSQL_USER}
       - DB_PASSWORD=${MYSQL_PASSWORD}
-      - DB_HOST=mysql
-    depends_on: ["mysql", "ingress-proxy", "reverse-proxy"]
+      - DB_HOST=db
+      #- DB_TABLE=${MYSQL_TABLE_NAME:-requests}
+    depends_on: ["db", "ingress-proxy", "reverse-proxy"]
     #ports: ["80:80"]
     #networks: ["backend"]
     networks:
       backend:
         ipv4_address: 172.20.0.5
 
-#volumes:
-#  db_data: {}
-#  wp_data: {}
+volumes:
+  mariadb_data: {}
 
 networks:
   backend:
